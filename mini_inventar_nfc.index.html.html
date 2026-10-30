@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Mini-Inventar</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eef2ff;background:#0b1020}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(145deg,#101a31,#0b1020 55%);min-height:100vh}
+main{max-width:980px;margin:auto;padding:28px 18px 60px}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.eyebrow{color:#9ca3af;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+h1{font-size:clamp(1.8rem,5vw,2.6rem);margin:5px 0}
+.sub{color:#aab4ca;margin:0}
+.pill{border:1px solid #34415e;background:#17223a;padding:8px 12px;border-radius:99px;color:#c7d2fe;font-size:.82rem}
+.panel{background:#141e33;border:1px solid #263550;border-radius:18px;padding:18px;margin:16px 0;box-shadow:0 12px 30px #0002}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap}
+input,select,textarea{width:100%;background:#0c1528;color:#eef2ff;border:1px solid #354461;border-radius:10px;padding:12px;font:inherit;min-width:0}
+button{border:0;border-radius:10px;padding:11px 15px;background:#8b9cff;color:#10152b;font-weight:700;font:inherit;cursor:pointer}
+button.secondary{background:#263550;color:#e5e7eb;border:1px solid #3b4b68}
+button.danger{background:#4a2532;color:#fecdd3;border:1px solid #713044}
+button:focus,input:focus,select:focus{outline:2px solid #a5b4fc;outline-offset:2px}
+.formgrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.stat{background:#101a2d;border:1px solid #263550;border-radius:14px;padding:14px}
+.stat strong{display:block;font-size:1.5rem;margin-top:4px}
+.muted{color:#9ca3af;font-size:.88rem}
+.list{display:grid;gap:10px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#101a2d;border:1px solid #293954;border-radius:13px;padding:13px}
+.item h3{margin:0 0 4px;font-size:1rem}
+.item p{margin:0;color:#aab4ca;font-size:.87rem}
+.actions{display:flex;gap:7px;flex-shrink:0}
+.actions button{padding:8px 11px}
+.tagbox{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.notice{background:#1e2b48;border-left:3px solid #8b9cff;padding:12px 14px;border-radius:8px;color:#dbe4ff;line-height:1.45}
+.empty{text-align:center;color:#9ca3af;padding:28px 10px}
+.hidden{display:none!important}
+footer{color:#77839a;font-size:.8rem;text-align:center;margin-top:24px}
+@media(max-width:620px){.formgrid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.item{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions button{flex:1}header{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><div class="eyebrow">Dein kleines Technikprojekt</div><h1>Mini-Inventar</h1><p class="sub">Dinge erfassen, Boxen verwalten und später per NFC öffnen.</p></div>
+  <span class="pill" id="tagStatus">Gesamtübersicht</span>
+</header>
+
+<section class="panel">
+  <div class="tagbox">
+    <div><strong id="viewTitle">Alle Gegenstände</strong><div class="muted" id="viewDescription">Dein Inventar auf einen Blick.</div></div>
+    <button class="secondary" id="showAll">Gesamtübersicht</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="muted">Gegenstände</span><strong id="itemCount">0</strong></div>
+    <div class="stat"><span class="muted">Gesamtmenge</span><strong id="totalQty">0</strong></div>
+    <div class="stat"><span class="muted">Boxen / Orte</span><strong id="boxCount">0</strong></div>
+  </div>
+  <div class="toolbar">
+    <input id="search" placeholder="Suchen: z. B. HDMI-Kabel" aria-label="Inventar durchsuchen">
+    <select id="boxFilter" aria-label="Nach Box filtern"><option value="">Alle Boxen / Orte</option></select>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="margin:0 0 14px;font-size:1.15rem">Gegenstand hinzufügen</h2>
+  <form id="addForm">
+    <div class="formgrid">
+      <input id="itemName" placeholder="Name, z. B. HDMI-Kabel" required maxlength="70">
+      <input id="itemQty" type="number" min="1" step="1" value="1" required aria-label="Menge">
+      <input id="itemBox" placeholder="Box / Ort, z. B. Kiste 01" required maxlength="50">
+    </div>
+    <div class="toolbar" style="margin-top:10px">
+      <input id="itemNote" placeholder="Notiz (optional)">
+      <button type="submit">+ Hinzufügen</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="tagbox" style="margin-bottom:12px"><h2 style="margin:0;font-size:1.15rem">Dein Bestand</h2><span class="muted" id="resultCount">0 Einträge</span></div>
+  <div id="items" class="list"></div>
+</section>
+
+<section class="panel">
+  <h2 style="margin:0 0 10px;font-size:1.15rem">NFC-Test vorbereiten</h2>
+  <div class="notice">
+    Ein NFC-Tag kann später einen Link wie <b>deine-seite.de/?box=Kiste%2001</b> öffnen. Diese Vorschau läuft zunächst innerhalb von ChatGPT; sie hat noch keine öffentliche HTTPS-Adresse. Sobald die Seite veröffentlicht ist, schreiben wir den echten Link auf deinen NFC-Tag.
+  </div>
+  <div class="toolbar" style="margin-top:12px">
+    <select id="tagBoxSelect" aria-label="Box für NFC-Link auswählen"></select>
+    <button class="secondary" id="makeLink">Test-Link anzeigen</button>
+  </div>
+  <div id="linkOutput" class="muted" style="margin-top:10px;overflow-wrap:anywhere"></div>
+</section>
+<footer>Deine Einträge werden in dieser Browser-Vorschau gespeichert. Für die spätere Nutzung auf mehreren Geräten richten wir eine gemeinsame Online-Speicherung ein.</footer>
+</main>
+<script>
+const KEY = "miniInventar_v1";
+let entries = [];
+try { entries = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { entries = []; }
+let activeBox = new URLSearchParams(location.search).get("box") || "";
+const $ = id => document.getElementById(id);
+function save(){ localStorage.setItem(KEY, JSON.stringify(entries)); render(); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function boxes(){ return [...new Set(entries.map(x=>x.box).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de")); }
+function render(){
+  const allBoxes=boxes(), q=$("search").value.trim().toLowerCase(), filter=$("boxFilter").value;
+  $("boxFilter").innerHTML='<option value="">Alle Boxen / Orte</option>'+allBoxes.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("");
+  $("tagBoxSelect").innerHTML=allBoxes.length?allBoxes.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join(""):'<option value="">Noch keine Box vorhanden</option>';
+  if(filter && allBoxes.includes(filter)) $("boxFilter").value=filter;
+  else if(activeBox && allBoxes.includes(activeBox)) $("boxFilter").value=activeBox;
+  const chosen=$("boxFilter").value;
+  let shown=entries.filter(x=>(!chosen||x.box===chosen)&&(`${x.name} ${x.box} ${x.note||""}`).toLowerCase().includes(q));
+  $("viewTitle").textContent=chosen?chosen:"Alle Gegenstände";
+  $("viewDescription").textContent=chosen?"Gegenstände an diesem Ort.":"Dein Inventar auf einen Blick.";
+  $("tagStatus").textContent=chosen?`NFC-Ziel: ${chosen}`:"Gesamtübersicht";
+  $("itemCount").textContent=entries.length;
+  $("totalQty").textContent=entries.reduce((n,x)=>n+Number(x.qty||0),0);
+  $("boxCount").textContent=allBoxes.length;
+  $("resultCount").textContent=`${shown.length} Einträge`;
+  $("items").innerHTML=shown.length?shown.map(x=>`<article class="item">
+    <div><h3>${esc(x.name)} <span class="muted">× ${Number(x.qty)}</span></h3><p>${esc(x.box)}${x.note?" · "+esc(x.note):""}</p></div>
+    <div class="actions"><button class="secondary" data-action="minus" data-id="${x.id}" aria-label="Menge verringern">− 1</button><button class="secondary" data-action="plus" data-id="${x.id}" aria-label="Menge erhöhen">+ 1</button><button class="danger" data-action="delete" data-id="${x.id}">Löschen</button></div>
+  </article>`).join(""):'<div class="empty">Noch nichts gefunden. Füge oben deinen ersten Gegenstand hinzu.</div>';
+}
+$("addForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("itemName").value.trim(), qty=Number($("itemQty").value), box=$("itemBox").value.trim();
+  if(!name||!box||!Number.isInteger(qty)||qty<1)return;
+  entries.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,qty,box,note:$("itemNote").value.trim()});
+  $("addForm").reset(); $("itemQty").value=1; save();
+});
+$("items").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-action]"); if(!b)return;
+  const x=entries.find(x=>x.id===b.dataset.id); if(!x)return;
+  if(b.dataset.action==="plus")x.qty++;
+  if(b.dataset.action==="minus")x.qty=Math.max(1,x.qty-1);
+  if(b.dataset.action==="delete" && confirm(`„${x.name}“ wirklich löschen?`))entries=entries.filter(y=>y.id!==x.id);
+  save();
+});
+$("search").addEventListener("input",render);
+$("boxFilter").addEventListener("change",()=>{activeBox=$("boxFilter").value;render();});
+$("showAll").addEventListener("click",()=>{activeBox="";$("boxFilter").value="";render();});
+$("makeLink").addEventListener("click",()=>{
+  const box=$("tagBoxSelect").value;
+  $("linkOutput").textContent=box?`Späterer NFC-Link: https://DEINE-DOMAIN/?box=${encodeURIComponent(box)}`:"Lege zuerst einen Gegenstand mit Box / Ort an.";
+});
+if(activeBox){$("boxFilter").value=activeBox;}
+render();
+</script>
+</body>
+</html>
